@@ -1,0 +1,107 @@
+{
+  "info": {
+    "name": "Sahm POS — Mock API",
+    "description": "Mock REST surface for the Smart Order Workspace. Endpoints are served by MSW inside the running app (http://localhost:4200). Start the app (npm start) and send requests against the open tab, or use this as a contract reference.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4200" },
+    { "key": "orderId", "value": "order-0" }
+  ],
+  "item": [
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
+          }
+        },
+        {
+          "name": "Advance order status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Retryable", "value": "1" },
+              { "key": "X-Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/advance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "advance"]
+            }
+          }
+        },
+        {
+          "name": "Set order status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Retryable", "value": "1" },
+              { "key": "X-Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ready\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Kitchen",
+      "item": [
+        {
+          "name": "Get kitchen load",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/kitchen/load", "host": ["{{baseUrl}}"], "path": ["api", "kitchen", "load"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Assistant",
+      "item": [
+        {
+          "name": "Stream AI suggestions (NDJSON)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/ai",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "ai"]
+            },
+            "description": "Streams NDJSON: token chunks followed by a terminal result chunk. ~25% simulated failure rate."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Search products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products?term=cheese&category=pizza",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "term", "value": "cheese" },
+                { "key": "category", "value": "pizza" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

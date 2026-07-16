@@ -1,0 +1,153 @@
+<div class="workspace">
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <div class="tstart">
+      <h1>Live Orders</h1>
+      <span class="tdiv" aria-hidden="true"></span>
+
+      <label class="select">
+        <span class="sr-only">Filter by channel</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <path d="M4 5h16l-6 8v6l-4-2v-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+        </svg>
+        <select [value]="store.channelFilter()" (change)="onChannel($event)">
+          <option value="all">All Channels</option>
+          <option value="walk-in">Walk-in</option>
+          <option value="delivery">Delivery</option>
+          <option value="online">Online</option>
+        </select>
+      </label>
+
+      <label class="select">
+        <span class="sr-only">Sort orders</span>
+        <select [value]="store.sortMode()" (change)="onSort($event)">
+          <option value="priority">Sort: Priority</option>
+          <option value="oldest">Sort: Oldest first</option>
+          <option value="newest">Sort: Newest first</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tools">
+      @if (store.pendingSyncCount() > 0) {
+        <app-badge color="var(--warning)">{{ store.pendingSyncCount() }} queued</app-badge>
+      }
+
+      <button
+        type="button"
+        class="switch"
+        role="switch"
+        [attr.aria-checked]="store.autoAccept()"
+        (click)="store.toggleAutoAccept()"
+      >
+        <span class="switch-label">Auto-accepting {{ store.autoAccept() ? 'On' : 'Off' }}</span>
+        <span class="track" [class.on]="store.autoAccept()"><span class="knob"></span></span>
+      </button>
+
+      <button
+        type="button"
+        class="conn"
+        [class.off]="!connection.isOnline()"
+        (click)="connection.toggleOffline()"
+        [attr.aria-pressed]="connection.isForcedOffline()"
+      >
+        <span class="conn-dot"></span>{{ connection.isOnline() ? 'Online' : 'Offline' }}
+      </button>
+      <button type="button" class="ghost" (click)="store.loadOrders()" aria-label="Refresh">↻</button>
+    </div>
+  </header>
+
+  <!-- Offline banner -->
+  @if (!connection.isOnline()) {
+    <div class="banner" role="status">
+      You're offline. Actions are queued and will sync automatically on reconnect.
+    </div>
+  }
+
+  <!-- Error toast -->
+  @if (store.error(); as err) {
+    <div class="toast" role="alert">
+      <span>{{ err }}</span>
+      <button type="button" (click)="store.dismissError()" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- Summary row -->
+  <section class="summary">
+    <app-kitchen-monitor [load]="store.kitchenLoad()" />
+    <div class="chips">
+      <div class="chip">
+        <span class="k">{{ store.activeCount() }}</span>
+        <span class="v">Active</span>
+      </div>
+      <div class="chip urgent">
+        <span class="k">{{ store.urgentCount() }}</span>
+        <span class="v">Urgent</span>
+      </div>
+      <div class="chip">
+        <span class="k">{{ store.pendingSyncCount() }}</span>
+        <span class="v">Queued</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Board -->
+  <div class="board" role="list">
+    @for (column of store.columns(); track column.status) {
+      <section class="column" role="listitem" [attr.aria-label]="columnLabel(column.status)">
+        <header class="col-head" [style.--c]="columnColor(column.status)">
+          <span class="col-dot" aria-hidden="true"></span>
+          <span class="col-title">{{ columnLabel(column.status) }}</span>
+          <span class="col-count">{{ column.orders.length }}</span>
+        </header>
+
+        <div class="col-body">
+          @if (store.loading() && column.orders.length === 0) {
+            @for (i of [1, 2]; track i) {
+              <app-skeleton height="120px" />
+            }
+          } @else {
+            @for (order of column.orders; track order.id) {
+              <app-order-card
+                [order]="order"
+                (advance)="advance($event)"
+                (select)="selectOrder($event)"
+              />
+            } @empty {
+              <app-empty-state icon="🍽️" title="Empty" hint="No orders here" />
+            }
+          }
+        </div>
+      </section>
+    }
+  </div>
+</div>
+
+<!-- AI / detail drawer -->
+@if (selectedOrder(); as order) {
+  <div class="scrim" (click)="closeDrawer()"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" [attr.aria-label]="'Order ' + order.reference">
+    <header class="drawer-head">
+      <div>
+        <h2>{{ order.reference }}</h2>
+        <p class="muted">{{ order.customerName }}</p>
+      </div>
+      <button type="button" class="ghost" (click)="closeDrawer()" aria-label="Close">✕</button>
+    </header>
+
+    <div class="drawer-items">
+      @for (item of order.items; track item.id) {
+        <div class="line">
+          <span>{{ item.quantity }}× {{ item.name }}</span>
+          <span>{{ item.unitPrice * item.quantity }} EGP</span>
+        </div>
+      }
+      <div class="line total">
+        <span>Total</span>
+        <span>{{ order.total }} EGP</span>
+      </div>
+    </div>
+
+    <app-ai-panel [state]="ai.state()" (retry)="ai.retryNow()" />
+  </aside>
+}

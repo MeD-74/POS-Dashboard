@@ -1,0 +1,115 @@
+<div class="search">
+  <header class="head">
+    <h1>Product Search</h1>
+    <p class="sub">Instant search across the full catalogue</p>
+  </header>
+
+  <!-- Search box -->
+  <div class="box">
+    <span class="mag" aria-hidden="true">🔍</span>
+    <input
+      #input
+      type="search"
+      role="combobox"
+      aria-label="Search products"
+      aria-autocomplete="list"
+      [attr.aria-expanded]="store.items().length > 0"
+      placeholder="Search burgers, pizza, drinks…"
+      [value]="store.term()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      autocomplete="off"
+    />
+    @if (store.loading()) {
+      <span class="spin" aria-label="Searching">⏳</span>
+    } @else if (store.term()) {
+      <button type="button" class="clear" (click)="store.clear(); input.focus()" aria-label="Clear">
+        ✕
+      </button>
+    }
+  </div>
+
+  <!-- Category filters -->
+  <div class="filters" role="group" aria-label="Category filters">
+    @for (cat of categories; track cat) {
+      <button
+        type="button"
+        class="filter"
+        [class.on]="isSelected(cat)"
+        [attr.aria-pressed]="isSelected(cat)"
+        (click)="store.toggleCategory(cat)"
+      >
+        {{ cat }}
+      </button>
+    }
+  </div>
+
+  <!-- Recent searches (only before typing) -->
+  @if (!store.hasQuery() && store.recent().length) {
+    <div class="recent">
+      <span class="recent-label">Recent:</span>
+      @for (term of store.recent(); track term) {
+        <button type="button" class="chip" (click)="store.applyRecent(term)">
+          <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          {{ term }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Result meta -->
+  @if (store.result(); as r) {
+    <p class="meta" role="status">
+      {{ r.total }} result{{ r.total === 1 ? '' : 's' }} · {{ r.took }}ms
+    </p>
+  }
+
+  <!-- Results -->
+  <div class="results">
+    @if (store.error(); as err) {
+      <app-error-state title="Search failed" [message]="err" [retryable]="false" />
+    } @else if (store.isEmpty()) {
+      <app-empty-state icon="🔎" title="No matches" hint="Try a different term or category" />
+    } @else if (store.items().length) {
+      <cdk-virtual-scroll-viewport itemSize="56" class="viewport" role="listbox">
+        <div
+          *cdkVirtualFor="let product of store.items(); let i = index; trackBy: trackById"
+          class="option"
+          role="option"
+          [class.active]="i === store.activeIndex()"
+          [attr.aria-selected]="i === store.activeIndex()"
+          (mouseenter)="store.setActive(i)"
+        >
+          <span class="p-thumb" aria-hidden="true">{{ icon(product.category) }}</span>
+          <div class="p-main">
+            <span class="p-name">
+              @for (seg of product.name | highlight: store.term(); track $index) {
+                @if (seg.match) {
+                  <mark>{{ seg.text }}</mark>
+                } @else {
+                  <span>{{ seg.text }}</span>
+                }
+              }
+            </span>
+            <span class="p-meta">
+              <span class="p-cat">{{ product.category }}</span>
+              @if (!product.available) {
+                <app-badge color="var(--cancelled)">out of stock</app-badge>
+              }
+            </span>
+          </div>
+          <span class="p-price">{{ product.price }} EGP</span>
+        </div>
+      </cdk-virtual-scroll-viewport>
+    } @else {
+      <app-empty-state
+        icon="🍔"
+        title="Start typing to search"
+        hint="Or pick a category above"
+      />
+    }
+  </div>
+</div>
